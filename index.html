@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Elixir | Home page</title>
+	<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+	<link rel="stylesheet" type="text/css" href="assets/css/style.css">
+</head>
+<body>
+	<div class="loader" id="loader">
+		Elixir
+	</div>
+<script>
+  const loader = document.getElementById("loader");
+
+  // Həm səhifənin yüklənməsini, həm də 3 saniyəni gözləyir
+  const minTime = new Promise(resolve => setTimeout(resolve, 1000));
+  const pageLoad = new Promise(resolve => window.addEventListener("load", resolve));
+
+  Promise.all([minTime, pageLoad]).then(() => {
+    loader.style.display = "none";
+  });
+</script>
+	<div class="all-body">
+		<div class="left">
+			<div class="logo">Elixir</div>
+			<div class="logoexh">E</div>
+			<!-- Menu start -->
+			<div class="menu">
+				<div class="menu-item" onclick="location.replace('home.html')">
+					<div class="menu-item-logo"><i class="fa-solid fa-house"></i></div>
+					<div class="menu-item-word">Home</div>
+				</div>
+				<div class="menu-item">
+					<div class="menu-item-logo"><i class="fa-solid fa-magnifying-glass"></i></div>
+					<div class="menu-item-word">Explore</div>
+				</div>
+				<div class="menu-item">
+					<div class="menu-item-logo"><i class="fa-solid fa-bell"></i></div>
+					<div class="menu-item-word">Notification</div>
+				</div>
+				<div class="menu-item">
+					<div class="menu-item-logo"><i class="fa-solid fa-envelope"></i></div>
+					<div class="menu-item-word">Messages</div>
+				</div>
+				<div class="menu-item">
+					<div class="menu-item-logo"><i class="fa-solid fa-meteor"></i></div>
+					<div class="menu-item-word">Elixir</div>
+				</div>
+				<div class="menu-item">
+					<div class="menu-item-logo"><i class="fa-solid fa-users"></i></div>
+					<div class="menu-item-word">Communities</div>
+				</div>
+				<div class="menu-item">
+					<div class="menu-item-logo"><i class="fa-solid fa-user"></i></div>
+					<div class="menu-item-word">Profile</div>
+				</div>
+				<div class="menu-item">
+					<div class="menu-item-logo"><i class="fa-solid fa-ellipsis"></i></div>
+					<div class="menu-item-word">More</div>
+				</div>
+			</div>
+			<!-- Menu end -->
+			<!-- Profile start -->
+			<div class="profile-sec">
+				<div class="left-sec">
+					<div class="profile-img">
+						<img src="https://pbs.twimg.com/profile_images/1916952761679433728/OUTsSUDo_400x400.png">
+					</div>
+					<div class="inform">
+						<div class="ad">Muj haci</div>
+						<div class="username">@mujhaci345</div>
+					</div>
+				</div>
+				<div class="right-sec">
+					<div class="sec-more-btn"><i class="fa-solid fa-ellipsis"></i></div>
+				</div>
+			</div>
+			<!-- Profile end -->
+		</div>
+		<!-- Left end -->
+		<!-- Mid start -->
+		<div class="mid">
+			<div class="user-topic">
+				<div class="selection">
+					<div class="discovery x">Discovery</div>
+					<div class="following">Following</div>
+				</div>
+				<form class="post">
+					<div class="post-ust">
+						<div class="profile-img post-mi">
+							<img src="https://pbs.twimg.com/profile_images/1916952761679433728/OUTsSUDo_400x400.png">
+						</div>
+						<div class="text-input">
+							<textarea id="autoTextarea" placeholder="What's happening?" maxlength="300"></textarea>
+						</div>
+					</div>
+					<div class="post-alt">
+						<div class="mini-functions">
+							<div class="function"><i class="fa-solid fa-image"></i></div>
+							<div class="function"><i class="fa-solid fa-clock"></i></div>
+							<div class="function"><i class="fa-solid fa-location-dot"></i></div>
+						</div>
+						<button class="post-btn" type="submit">Post</button>
+					</div>
+				</form>
+			</div>
+			<!-- User topic end -->
+			<div class="feeds">
+				<div class="feed">
+					<div class="fh">
+						<div class="user-fi">
+							<div class="profile-img user-profile"><img src="https://pbs.twimg.com/profile_images/1916952761679433728/OUTsSUDo_400x400.png"></div>
+							<div class="ua">
+								<div class="ad">Muj Haci</div>
+							<div class="username">@mujhaci345</div>
+							</div>
+						</div>
+						<div class="more-fs">
+							<i class="fa-solid fa-ellipsis"></i>
+						</div>
+					</div>
+					<div class="f-content">
+						<div class="fc-text">Congratulations, NeuraLink team !</div>
+						<div class="fc-feed">
+							<img src="https://pbs.twimg.com/media/Gp4fhB5W0AAvoJq?format=jpg&name=small">
+						</div>
+					</div>
+					<div class="react-btns">
+						<div class="react-btn es">
+							<i class="fa-solid fa-comment e"></i>
+							<div class="total-amount">4.5k</div>
+						</div>
+						<div class="react-btn res">
+							<i class="fa-solid fa-repeat re"></i>
+							<div class="total-amount">4.5k</div>
+						</div>
+						<div class="react-btn hes">
+							<i class="fa-solid fa-heart he"></i>
+							<div class="total-amount">4.5k</div>
+						</div>
+						<div class="br">
+							<div class="react-btn es">
+							<i class="fa-solid fa-bookmark e"></i>
+						</div>
+						<div class="react-btn es">
+							<i class="fa-solid fa-share e"></i>
+						</div>
+						</div>
+					</div>
+				</div>
+				<div class="feed">
+					<div class="fh">
+						<div class="user-fi">
+							<div class="profile-img user-profile"><img src="https://pbs.twimg.com/profile_images/1916952761679433728/OUTsSUDo_400x400.png"></div>
+							<div class="ua">
+								<div class="ad">Muj Haci</div>
+							<div class="username">@mujhaci345</div>
+							</div>
+						</div>
+						<div class="more-fs">
+							<i class="fa-solid fa-ellipsis"></i>
+						</div>
+					</div>
+					<div class="f-content">
+						<div class="fc-text">Congratulations, NeuraLink team !</div>
+						<div class="fc-feed">
+							<img src="https://pbs.twimg.com/media/Gp4fhB5W0AAvoJq?format=jpg&name=small">
+						</div>
+					</div>
+					<div class="react-btns">
+						<div class="react-btn es">
+							<i class="fa-solid fa-comment e"></i>
+							<div class="total-amount">4.5k</div>
+						</div>
+						<div class="react-btn res">
+							<i class="fa-solid fa-repeat re"></i>
+							<div class="total-amount">4.5k</div>
+						</div>
+						<div class="react-btn hes">
+							<i class="fa-solid fa-heart he"></i>
+							<div class="total-amount">4.5k</div>
+						</div>
+						<div class="br">
+							<div class="react-btn es">
+							<i class="fa-solid fa-bookmark e"></i>
+						</div>
+						<div class="react-btn es">
+							<i class="fa-solid fa-share e"></i>
+						</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<!-- Mid end -->
+		<div class="right">
+			<div class="as-s">
+				<i class="fa-solid fa-magnifying-glass"></i>
+				<input type="search" name="" placeholder="Search">
+			</div>
+			<div class="banner">
+				<img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQColuq9wDIJ-_KObhwxzNiBNVXItf-UVQxWA&s">
+			</div>
+			<div class="wh">
+				<div class="whh">
+					What's happening?
+				</div>
+				<div class="trends">
+					<div class="trend">#BomBom</div>
+					<div class="trend">Ukranie</div>
+					<div class="trend">Azerbaijan</div>
+				</div>
+			</div>
+			<div class="weather-box">
+				<div class="wbh"><i class="fa-solid fa-cloud"></i>Weather</div>
+  				<p>Baku, AZ</p>
+  				<h3>+17°C ☀️</h3>
+			</div>
+
+		</div>
+	</div>
+	<script type="text/javascript">
+		const textarea = document.getElementById("autoTextarea");
+
+textarea.addEventListener("input", function () {
+  this.style.height = "auto"; // sıfırla
+  this.style.height = this.scrollHeight + "px"; // mətnə uyğun hündürlük ver
+});
+	</script>
+</body>
+</html>
