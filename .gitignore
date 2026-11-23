@@ -5,3 +5,4 @@ dist/
 .env.*.local
 .netlify/
 npm-debug.log*
+elixir-netlify-*.zip

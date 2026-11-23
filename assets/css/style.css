@@ -1,3 +1,4 @@
+/* Versioned build: keep deployed assets cache-safe across Netlify releases. */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500&family=Turret+Road:wght@200;300;400;500;700;800&display=swap');
 *{
@@ -12,6 +13,7 @@ html{
 	background: var(--black);
 }
 :root{
+	--asset-release: 20261124;
 	--white: white;
 	--black: black;
 	--gray: gray;

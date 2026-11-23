@@ -234,7 +234,10 @@ for each row execute function public.handle_new_user();
 create or replace function public.protect_profile_privileges()
 returns trigger language plpgsql set search_path = '' as $$
 begin
-  if not public.is_admin(auth.uid()) then
+  -- Preserve privileged fields for ordinary authenticated users. A null
+  -- auth.uid() represents trusted server-side maintenance (for example the
+  -- Supabase SQL editor used to appoint the first administrator).
+  if auth.uid() is not null and not public.is_admin(auth.uid()) then
     new.role := old.role;
     new.is_active := old.is_active;
     new.joined_at := old.joined_at;
