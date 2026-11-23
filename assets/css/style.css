@@ -1092,6 +1092,34 @@ button {
 .left .left-sec .username {
   color: #a8a8a8;
 }
+.left .profile-sec {
+  width: 100%;
+}
+.left .left-sec {
+  min-width: 0;
+  flex: 1;
+}
+.left .inform {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 1px;
+}
+.left .inform .ad,
+.left .inform .username {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.left .inform .ad {
+  line-height: 1.2;
+}
+.left .inform .username {
+  font-size: .86rem;
+  line-height: 1.2;
+}
 .left .menu-item:hover,
 .left .profile-sec:hover {
   background: #171717;
