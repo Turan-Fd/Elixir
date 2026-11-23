@@ -1075,6 +1075,39 @@ button {
   color: inherit;
   text-align: left;
 }
+
+/* Sidebar stays deliberately monochrome: black canvas, white controls. */
+.left {
+  background: #000;
+  border-right-color: #363636;
+}
+.left .logo,
+.left .logoexh,
+.left .menu-item,
+.left .profile-sec,
+.left .left-sec .ad,
+.left .right-sec {
+  color: #fff;
+}
+.left .left-sec .username {
+  color: #a8a8a8;
+}
+.left .menu-item:hover,
+.left .profile-sec:hover {
+  background: #171717;
+}
+.left .nav-button.active,
+.left .menu-item.active {
+  color: #000;
+  background: #fff;
+}
+.left .nav-button.active .notification-dot {
+  background: #000;
+}
+.left .notification-dot {
+  background: #fff;
+  border: 2px solid #000;
+}
 .page-header {
   border-radius: 0 0 20px 20px;
   height: 55px;
