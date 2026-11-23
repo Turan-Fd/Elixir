@@ -269,6 +269,9 @@ html{
 	height: 40px;
 	border-radius: 50px;
 	cursor: pointer;
+	color: #fff;
+	background: #1c1c1c;
+	border: 1px solid #4a4a4a;
 }
 .more-fs:hover{
 	background: var(--hover-main);
@@ -1654,4 +1657,47 @@ button {
   .menu-item:hover::after {
     display: none;
   }
+}
+
+/* Group targeting and student help posts. */
+.composer-options {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  padding: 0 20px 10px 82px;
+}
+.composer-options label {
+  display: grid;
+  gap: 5px;
+  color: var(--gray);
+  font-size: .82rem;
+}
+.composer-options select {
+  min-width: 155px;
+  color: var(--white);
+  background: #141414;
+  border: 1px solid #4a4a4a;
+  border-radius: 9px;
+  padding: 7px 9px;
+}
+.composer-select small { color: var(--gray); max-width: 220px; }
+.post-labels { display: flex; gap: 7px; flex-wrap: wrap; padding: 4px 10px 0; }
+.post-label { display: inline-flex; gap: 5px; align-items: center; border-radius: 999px; padding: 4px 9px; font-size: .75rem; }
+.help-label { color: #fff; background: #3b2a0c; border: 1px solid #8a6419; }
+.group-label { color: #fff; background: #202020; border: 1px solid #4c4c4c; }
+.groups-page { padding: 82px 18px 30px; }
+.groups-intro { color: var(--white); margin: 0 0 20px; }
+.groups-intro p { color: var(--gray); margin-top: 6px; }
+.groups-grid { padding: 0; }
+.group-card { background: #111; border: 1px solid #3d3d3d; border-radius: 16px; color: var(--white); padding: 20px; min-height: 190px; display: flex; flex-direction: column; gap: 10px; }
+.group-card p, .group-card small { color: var(--gray); }
+.group-card .text-button { margin-top: auto; width: fit-content; }
+.group-icon { color: #fff; font-size: 1.35rem; }
+.member-picker { border: 1px solid #444; border-radius: 10px; padding: 10px; display: grid; gap: 8px; max-height: 240px; overflow: auto; }
+.member-picker legend { color: var(--white); padding: 0 6px; }
+.member-picker small { color: var(--gray); }
+@media only screen and (max-width: 768px) {
+  .composer-options { padding-left: 18px; }
+  .groups-page { padding: 70px 12px 24px; }
 }

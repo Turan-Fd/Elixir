@@ -15,6 +15,7 @@ const state = {
   feedPage: 0,
   feedDone: false,
   feedItems: [],
+  groups: [],
   search: '',
   realtime: null
 };
@@ -154,6 +155,7 @@ function bindStaticEvents() {
   document.querySelector('#global-search').addEventListener('input', event => {
     state.search = event.target.value.trim().toLowerCase();
     if (state.route === 'feed') renderFeedItems();
+    else if (state.route === 'groups') renderGroups();
     else if (state.route === 'courses') renderCourses();
   });
 }
@@ -216,12 +218,13 @@ function openPasswordRecovery() {
 async function handleRoute() {
   if (!state.session || !state.profile) return;
   const { route, id } = routeFromHash();
-  const allowed = ['feed', 'courses', 'lesson', 'assignments', 'notifications', 'profile', 'admin'];
+  const allowed = ['feed', 'groups', 'courses', 'lesson', 'assignments', 'notifications', 'profile', 'admin'];
   state.route = allowed.includes(route) ? route : 'feed';
   state.routeId = id;
   document.querySelectorAll('.nav-button').forEach(button => button.classList.toggle('active', button.dataset.route === state.route));
   try {
     if (state.route === 'feed') await renderFeed();
+    if (state.route === 'groups') await renderGroups();
     if (state.route === 'courses') await renderCourses();
     if (state.route === 'lesson') await renderLesson(id);
     if (state.route === 'assignments') await renderAssignments();
@@ -248,18 +251,22 @@ function setupRealtime() {
   let timer;
   state.realtime = supabase.channel('community-feed')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => {
-      clearTimeout(timer); timer = setTimeout(() => state.route === 'feed' && renderFeed(), 700);
+      clearTimeout(timer); timer = setTimeout(() => state.route === 'feed' && renderFeed({ preserveScroll: true }), 700);
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () => {
-      clearTimeout(timer); timer = setTimeout(() => state.route === 'feed' && renderFeed(), 700);
+      clearTimeout(timer); timer = setTimeout(() => state.route === 'feed' && renderFeed({ preserveScroll: true }), 700);
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'post_reactions' }, () => {
-      clearTimeout(timer); timer = setTimeout(() => state.route === 'feed' && renderFeed(), 700);
+      clearTimeout(timer); timer = setTimeout(() => state.route === 'feed' && renderFeed({ preserveScroll: true }), 700);
     }).subscribe();
 }
 
-async function renderFeed() {
-  setHeader('Discovery', 'Latest', () => renderFeed());
+async function renderFeed({ preserveScroll = false } = {}) {
+  const scrollPosition = preserveScroll ? window.scrollY : 0;
+  setHeader('Home', 'Refresh', () => renderFeed({ preserveScroll: true }));
+  const { data: groups, error: groupsError } = await supabase.from('community_groups').select('id,name').order('name');
+  if (groupsError) throw groupsError;
+  state.groups = groups || [];
   state.feedPage = 0;
   state.feedDone = false;
   state.feedItems = [];
@@ -267,11 +274,59 @@ async function renderFeed() {
   bindComposer();
   document.querySelector('#load-more').addEventListener('click', loadFeedPage);
   await loadFeedPage();
+  if (preserveScroll) window.scrollTo({ top: scrollPosition, behavior: 'instant' });
+}
+
+async function renderGroups() {
+  setHeader('Groups', isAdmin() ? 'Create group' : 'Refresh', () => isAdmin() ? openGroupForm() : renderGroups());
+  setLoading('Loading groupsâ€¦');
+  const { data: groups, error } = await supabase.from('community_groups').select('id,name,description,created_at,group_members(count)').order('name');
+  if (error) throw error;
+  state.groups = groups || [];
+  els.view.innerHTML = `<section class="groups-page"><div class="groups-intro"><h1>Your groups</h1><p>Group posts and assignments are visible only to their members.</p></div><div class="card-grid groups-grid">${state.groups.length ? state.groups.map(group => `<article class="group-card"><span class="group-icon"><i class="fa-solid fa-users"></i></span><h2>${e(group.name)}</h2><p>${e(group.description || 'No description yet.')}</p><small>${group.group_members?.[0]?.count || 0} member${group.group_members?.[0]?.count === 1 ? '' : 's'}</small>${isAdmin() ? `<button class="text-button manage-group" data-group="${e(group.id)}">Manage members</button>` : ''}</article>`).join('') : empty('fa-users', 'No groups yet', isAdmin() ? 'Create the first group for your community.' : 'An administrator has not added you to a group yet.')}</div></section>`;
+  document.querySelectorAll('.manage-group').forEach(button => button.addEventListener('click', () => openGroupForm(button.dataset.group)));
+}
+
+async function openGroupForm(groupId = '') {
+  const [{ data: allMembers, error: membersError }, { data: group }] = await Promise.all([
+    supabase.from('profiles').select('id,display_name,username,role').eq('is_active', true).order('display_name'),
+    groupId ? supabase.from('community_groups').select('id,name,description,group_members(user_id)').eq('id', groupId).single() : Promise.resolve({ data: null })
+  ]);
+  if (membersError) return errorMessage(membersError);
+  const memberIds = new Set(group?.group_members?.map(member => member.user_id) || []);
+  showModal(`<h2>${group ? 'Manage group' : 'Create group'}</h2><form id="group-form"><label>Group name<input name="name" minlength="3" maxlength="80" value="${e(group?.name || '')}" required></label><label>Description<textarea name="description" maxlength="500">${e(group?.description || '')}</textarea></label><fieldset class="member-picker"><legend>Members</legend>${allMembers.map(member => `<label class="checkbox"><input type="checkbox" name="members" value="${e(member.id)}" ${memberIds.has(member.id) ? 'checked' : ''}> ${e(member.display_name)} <small>@${e(member.username)} · ${e(member.role)}</small></label>`).join('')}</fieldset><button class="post-btn">${group ? 'Save group' : 'Create group'}</button></form>`);
+  document.querySelector('#group-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const memberIdsToSave = [...form.querySelectorAll('[name=members]:checked')].map(input => input.value);
+    try {
+      let savedGroupId = groupId;
+      if (group) {
+        const { error: updateError } = await supabase.from('community_groups').update({ name: form.name.value.trim(), description: form.description.value.trim() }).eq('id', groupId);
+        if (updateError) throw updateError;
+        const { error: clearError } = await supabase.from('group_members').delete().eq('group_id', groupId);
+        if (clearError) throw clearError;
+      } else {
+        const { data: created, error: createError } = await supabase.from('community_groups').insert({ name: form.name.value.trim(), description: form.description.value.trim(), created_by: currentUserId() }).select('id').single();
+        if (createError) throw createError;
+        savedGroupId = created.id;
+      }
+      if (memberIdsToSave.length) {
+        const { error: addError } = await supabase.from('group_members').insert(memberIdsToSave.map(user_id => ({ group_id: savedGroupId, user_id })));
+        if (addError) throw addError;
+      }
+      closeModal(); toast(group ? 'Group updated.' : 'Group created.', 'success'); await renderGroups();
+    } catch (error) { errorMessage(error); }
+  });
 }
 
 function postComposer() {
+  const groupTargeting = isEducator() && state.groups.length
+    ? `<label class="composer-select">Visible to groups<select name="group_ids" multiple size="${Math.min(4, state.groups.length)}">${state.groups.map(group => `<option value="${e(group.id)}">${e(group.name)}</option>`).join('')}</select><small>Leave empty for the whole community.</small></label>`
+    : '';
   return `<form id="post-form" class="post" novalidate>
     <div class="post-ust"><div class="profile-img post-mi"><img src="${e(avatar(state.profile))}" alt=""></div><div class="text-input"><textarea id="autoTextarea" name="body" placeholder="Share with the community" maxlength="3000" required></textarea><div id="post-preview" class="image-preview hidden"></div></div></div>
+    <div class="composer-options"><label>Post type<select name="post_kind"><option value="post">Community post</option><option value="help">Help question</option></select></label>${groupTargeting}</div>
     <div class="post-alt"><div class="mini-functions"><label class="function" title="Add image"><i class="fa-solid fa-image"></i><input id="post-image" name="image" type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden></label>${isEducator() ? '<label class="function" title="Attach learning materials"><i class="fa-solid fa-paperclip"></i><input id="post-materials" name="materials" type="file" multiple accept=".pdf,.html,.txt,.zip,.docx,.pptx,.xlsx,image/jpeg,image/png,image/webp" hidden></label><span id="material-count" class="material-count"></span>' : ''}</div><button class="post-btn" type="submit">Post</button></div>
   </form>`;
 }
@@ -319,21 +374,23 @@ async function createPost(event) {
       if (uploadError) throw uploadError;
       mediaUrl = supabase.storage.from('post-media').getPublicUrl(path).data.publicUrl;
     }
-    const { data: createdPost, error } = await supabase.from('posts').insert({ author_id: currentUserId(), body, media_url: mediaUrl }).select('id').single();
+    const groupIds = [...form.group_ids?.selectedOptions || []].map(option => option.value);
+    const postKind = form.post_kind.value;
+    const { data: returnedPostId, error } = await supabase.rpc('create_post_with_groups', { post_body: body, post_media_url: mediaUrl, target_group_ids: groupIds, requested_kind: postKind });
     if (error) throw error;
-    createdPostId = createdPost.id;
+    createdPostId = returnedPostId;
     for (const material of [...(form.materials?.files || [])]) {
       const safeName = material.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const path = `${currentUserId()}/${createdPost.id}/${crypto.randomUUID()}-${safeName}`;
+      const path = `${currentUserId()}/${createdPostId}/${crypto.randomUUID()}-${safeName}`;
       const { error: uploadError } = await supabase.storage.from('post-materials').upload(path, material, { contentType: material.type });
       if (uploadError) throw uploadError;
       uploadedMaterials.push(path);
-      const { error: attachmentError } = await supabase.from('post_attachments').insert({ post_id: createdPost.id, file_name: material.name, storage_path: path, mime_type: material.type || 'application/octet-stream', file_size: material.size });
+      const { error: attachmentError } = await supabase.from('post_attachments').insert({ post_id: createdPostId, file_name: material.name, storage_path: path, mime_type: material.type || 'application/octet-stream', file_size: material.size });
       if (attachmentError) throw attachmentError;
     }
     form.reset();
     document.querySelector('#post-preview').classList.add('hidden');
-    toast('Posted to the community.', 'success');
+    toast(postKind === 'help' ? 'Help question posted.' : 'Posted to the community.', 'success');
     await renderFeed();
   } catch (error) {
     if (uploadedMaterials.length) await supabase.storage.from('post-materials').remove(uploadedMaterials);
@@ -347,7 +404,7 @@ async function loadFeedPage() {
   const from = state.feedPage * 10;
   const to = from + 9;
   const [postsResult, announcementsResult] = await Promise.all([
-    supabase.from('posts').select('id,body,media_url,author_id,created_at,updated_at,profile:profiles!posts_author_id_fkey(display_name,username,avatar_url,role),comments(count),post_reactions(count),post_attachments(id,file_name,storage_path,mime_type,file_size)').order('created_at', { ascending: false }).range(from, to),
+    supabase.from('posts').select('id,body,media_url,post_kind,author_id,created_at,updated_at,profile:profiles!posts_author_id_fkey(display_name,username,avatar_url,role),comments(count),post_reactions(count),post_attachments(id,file_name,storage_path,mime_type,file_size),post_groups(group:community_groups(id,name))').order('created_at', { ascending: false }).range(from, to),
     state.feedPage === 0 ? supabase.from('announcements').select('id,title,body,is_pinned,published_at,author_id,profile:profiles!announcements_author_id_fkey(display_name,username,avatar_url,role)').order('is_pinned', { ascending: false }).order('published_at', { ascending: false }).limit(10) : Promise.resolve({ data: [], error: null })
   ]);
   if (postsResult.error) throw postsResult.error;
@@ -381,7 +438,9 @@ function postCard(post) {
   const commentCount = post.comments?.[0]?.count || 0;
   const reactionCount = post.post_reactions?.[0]?.count || 0;
   const materials = post.post_attachments?.length ? `<div class="post-materials">${post.post_attachments.map(file => `<button class="post-material" data-path="${e(file.storage_path)}" data-name="${e(file.file_name)}"><i class="fa-solid fa-file-arrow-down"></i><span>${e(file.file_name)}<small>${e(file.mime_type)}</small></span></button>`).join('')}</div>` : '';
-  return `<article class="feed" data-post-id="${e(post.id)}">${authorHeader(post)}<div class="f-content"><div class="fc-text">${nl(post.body)}</div>${post.media_url ? `<div class="fc-feed"><img src="${e(post.media_url)}" alt="Post attachment" loading="lazy"></div>` : ''}${materials}</div><div class="react-btns"><button class="react-btn es comment-button" data-post="${e(post.id)}"><i class="fa-solid fa-comment e"></i><span class="total-amount">${commentCount}</span></button><button class="react-btn hes like-button ${post.liked ? 'liked' : ''}" data-post="${e(post.id)}" data-liked="${post.liked}"><i class="fa-${post.liked ? 'solid' : 'regular'} fa-heart he"></i><span class="total-amount">${reactionCount}</span></button><span class="br"><button class="react-btn es share-button" data-post="${e(post.id)}"><i class="fa-solid fa-share e"></i></button></span></div></article>`;
+  const groups = post.post_groups?.map(item => item.group?.name).filter(Boolean) || [];
+  const labels = `${post.post_kind === 'help' ? '<span class="post-label help-label"><i class="fa-solid fa-circle-question"></i> Help request</span>' : ''}${groups.map(name => `<span class="post-label group-label"><i class="fa-solid fa-users"></i> ${e(name)}</span>`).join('')}`;
+  return `<article class="feed" data-post-id="${e(post.id)}">${authorHeader(post)}<div class="f-content">${labels ? `<div class="post-labels">${labels}</div>` : ''}<div class="fc-text">${nl(post.body)}</div>${post.media_url ? `<div class="fc-feed"><img src="${e(post.media_url)}" alt="Post attachment" loading="lazy"></div>` : ''}${materials}</div><div class="react-btns"><button class="react-btn es comment-button" data-post="${e(post.id)}"><i class="fa-solid fa-comment e"></i><span class="total-amount">${commentCount}</span></button><button class="react-btn hes like-button ${post.liked ? 'liked' : ''}" data-post="${e(post.id)}" data-liked="${post.liked}"><i class="fa-${post.liked ? 'solid' : 'regular'} fa-heart he"></i><span class="total-amount">${reactionCount}</span></button><span class="br"><button class="react-btn es share-button" data-post="${e(post.id)}"><i class="fa-solid fa-share e"></i></button></span></div></article>`;
 }
 
 function announcementCard(item) {
@@ -640,9 +699,10 @@ async function renderAdmin() {
 function metric(icon, count, label) { return `<article class="metric-card"><i class="fa-solid ${icon}"></i><strong>${count ?? 0}</strong><span>${label}</span></article>`; }
 
 function openAdminCreateMenu() {
-  showModal(`<h2>Create</h2><div class="modal-menu"><button id="create-course"><i class="fa-solid fa-graduation-cap"></i> Course</button><button id="create-announcement"><i class="fa-solid fa-bullhorn"></i> Announcement</button></div>`);
+  showModal(`<h2>Create</h2><div class="modal-menu"><button id="create-course"><i class="fa-solid fa-graduation-cap"></i> Course</button><button id="create-announcement"><i class="fa-solid fa-bullhorn"></i> Announcement</button>${isAdmin() ? '<button id="create-group"><i class="fa-solid fa-users"></i> Group</button>' : ''}</div>`);
   document.querySelector('#create-course').addEventListener('click', openCourseForm);
   document.querySelector('#create-announcement').addEventListener('click', openAnnouncementForm);
+  document.querySelector('#create-group')?.addEventListener('click', () => openGroupForm());
 }
 
 function openCourseForm() {
@@ -694,11 +754,13 @@ async function openLessonForm(courseId) {
   });
 }
 
-function openAssignmentForm(courseId) {
-  showModal(`<h2>New assignment</h2><form id="assignment-form"><label>Title<input name="title" minlength="3" maxlength="160" required></label><label>Description<textarea name="description" required></textarea></label><label>Due date<input name="due_at" type="datetime-local"></label><label>Status<select name="status"><option value="draft">Draft</option><option value="published">Published</option></select></label><label class="checkbox"><input name="counts" type="checkbox"> Counts toward selection exam score</label><p class="muted">Leave unchecked for homework and classroom activity during the first two weeks.</p><button class="post-btn">Create</button></form>`);
+async function openAssignmentForm(courseId) {
+  const { data: groups, error: groupsError } = await supabase.from('community_groups').select('id,name').order('name');
+  if (groupsError) return errorMessage(groupsError);
+  showModal(`<h2>New assignment</h2><form id="assignment-form"><label>Assigned group<select name="group_id"><option value="">Course members</option>${groups.map(group => `<option value="${e(group.id)}">${e(group.name)}</option>`).join('')}</select><small>Every member of the selected group receives a notification when published.</small></label><label>Title<input name="title" minlength="3" maxlength="160" required></label><label>Description<textarea name="description" required></textarea></label><label>Due date<input name="due_at" type="datetime-local"></label><label>Status<select name="status"><option value="draft">Draft</option><option value="published">Published</option></select></label><label class="checkbox"><input name="counts" type="checkbox"> Counts toward selection exam score</label><p class="muted">Leave unchecked for homework and classroom activity during the first two weeks.</p><button class="post-btn">Create</button></form>`);
   document.querySelector('#assignment-form').addEventListener('submit', async event => {
     event.preventDefault(); const form = event.currentTarget;
-    const { error } = await supabase.from('assignments').insert({ course_id: courseId, title: form.title.value.trim(), description: form.description.value.trim(), due_at: form.due_at.value ? new Date(form.due_at.value).toISOString() : null, status: form.status.value, counts_toward_selection_exam: form.counts.checked, created_by: currentUserId() });
+    const { error } = await supabase.from('assignments').insert({ course_id: courseId, group_id: form.group_id.value || null, title: form.title.value.trim(), description: form.description.value.trim(), due_at: form.due_at.value ? new Date(form.due_at.value).toISOString() : null, status: form.status.value, counts_toward_selection_exam: form.counts.checked, created_by: currentUserId() });
     if (error) errorMessage(error); else { closeModal(); toast('Assignment created.', 'success'); await renderAdmin(); }
   });
 }
@@ -718,13 +780,29 @@ async function reviewSubmission(id) {
   });
 }
 
-function manageUser(button) {
+async function manageUser(button) {
   if (button.dataset.user === currentUserId()) return toast('Manage your own role directly in Supabase to avoid locking yourself out.', 'error');
-  showModal(`<h2>Manage member</h2><form id="manage-user-form"><label>Role<select name="role"><option value="student" ${button.dataset.role === 'student' ? 'selected' : ''}>Student</option><option value="instructor" ${button.dataset.role === 'instructor' ? 'selected' : ''}>Instructor</option><option value="admin" ${button.dataset.role === 'admin' ? 'selected' : ''}>Admin</option></select></label><label class="checkbox"><input name="active" type="checkbox" ${button.dataset.active === 'true' ? 'checked' : ''}> Account active</label><button class="post-btn">Save</button></form>`);
+  const [{ data: groups, error: groupsError }, { data: memberships, error: membershipsError }] = await Promise.all([
+    supabase.from('community_groups').select('id,name').order('name'),
+    supabase.from('group_members').select('group_id').eq('user_id', button.dataset.user)
+  ]);
+  if (groupsError || membershipsError) return errorMessage(groupsError || membershipsError);
+  const assigned = new Set(memberships.map(item => item.group_id));
+  showModal(`<h2>Manage member</h2><form id="manage-user-form"><label>Role<select name="role"><option value="student" ${button.dataset.role === 'student' ? 'selected' : ''}>Student</option><option value="instructor" ${button.dataset.role === 'instructor' ? 'selected' : ''}>Instructor</option><option value="admin" ${button.dataset.role === 'admin' ? 'selected' : ''}>Admin</option></select></label><label class="checkbox"><input name="active" type="checkbox" ${button.dataset.active === 'true' ? 'checked' : ''}> Account active</label><fieldset class="member-picker"><legend>Groups</legend>${groups.length ? groups.map(group => `<label class="checkbox"><input name="groups" type="checkbox" value="${e(group.id)}" ${assigned.has(group.id) ? 'checked' : ''}> ${e(group.name)}</label>`).join('') : '<small>Create groups first.</small>'}</fieldset><button class="post-btn">Save</button></form>`);
   document.querySelector('#manage-user-form').addEventListener('submit', async event => {
     event.preventDefault(); const form = event.currentTarget;
-    const { error } = await supabase.from('profiles').update({ role: form.role.value, is_active: form.active.checked }).eq('id', button.dataset.user);
-    if (error) errorMessage(error); else { closeModal(); toast('Member updated.', 'success'); await renderAdmin(); }
+    try {
+      const { error } = await supabase.from('profiles').update({ role: form.role.value, is_active: form.active.checked }).eq('id', button.dataset.user);
+      if (error) throw error;
+      const { error: removeError } = await supabase.from('group_members').delete().eq('user_id', button.dataset.user);
+      if (removeError) throw removeError;
+      const groupIds = [...form.querySelectorAll('[name=groups]:checked')].map(input => input.value);
+      if (groupIds.length) {
+        const { error: addError } = await supabase.from('group_members').insert(groupIds.map(group_id => ({ group_id, user_id: button.dataset.user })));
+        if (addError) throw addError;
+      }
+      closeModal(); toast('Member updated.', 'success'); await renderAdmin();
+    } catch (error) { errorMessage(error); }
   });
 }
 
