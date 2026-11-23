@@ -53,6 +53,8 @@ explicitly sample content and contains no student records.
 1. Push this repository to GitHub and import it in Netlify.
 2. Netlify reads `netlify.toml`: build command `npm run build`, publish directory
    `dist`, Node 22, SPA fallback, caching, and security headers are configured.
+   The equivalent `public/_headers` and `public/_redirects` files ensure the
+   same protections when the production bundle is deployed with Netlify Drop.
 3. In **Site configuration → Environment variables**, add
    `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
 4. Deploy the site.
