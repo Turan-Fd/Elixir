@@ -1154,6 +1154,16 @@ button {
   width: 55%;
   border-bottom: 1px solid gray;
 }
+.page-refresh {
+  width: 38px;
+  height: 38px;
+  margin: auto 12px auto 0;
+  border-radius: 50%;
+  color: var(--white);
+  background: transparent;
+  cursor: pointer;
+}
+.page-refresh:hover { background: #202020; }
 .page-header button {
   width: 50%;
   padding: 12px;

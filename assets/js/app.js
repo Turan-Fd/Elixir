@@ -27,6 +27,7 @@ const els = {
   view: document.querySelector('#view'),
   title: document.querySelector('#page-title'),
   action: document.querySelector('#page-action'),
+  refresh: document.querySelector('#page-refresh'),
   modal: document.querySelector('#modal-root'),
   toasts: document.querySelector('#toast-root')
 };
@@ -78,6 +79,8 @@ function setHeader(title, action = '', actionHandler = null) {
   els.action.textContent = action;
   els.action.style.visibility = action ? 'visible' : 'hidden';
   els.action.onclick = actionHandler;
+  els.refresh.style.visibility = 'hidden';
+  els.refresh.onclick = null;
 }
 
 function renderProfileChrome() {
@@ -263,7 +266,9 @@ function setupRealtime() {
 
 async function renderFeed({ preserveScroll = false } = {}) {
   const scrollPosition = preserveScroll ? window.scrollY : 0;
-  setHeader('Home', 'Refresh', () => renderFeed({ preserveScroll: true }));
+  setHeader('Home', 'Qrup', () => navigate('groups'));
+  els.refresh.style.visibility = 'visible';
+  els.refresh.onclick = () => renderFeed({ preserveScroll: true });
   const { data: groups, error: groupsError } = await supabase.from('community_groups').select('id,name').order('name');
   if (groupsError) throw groupsError;
   state.groups = groups || [];
